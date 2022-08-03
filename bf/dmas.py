@@ -8,9 +8,10 @@ def dmas_s_ij(aperture_data, i, j):
 
 
 def dmas_bandpass(sampling_frequency, pulse_frequency):
-    return scipy.signal.firls(151,
+    bandpass = scipy.signal.firls(151,
                               [0, pulse_frequency * 0.9, pulse_frequency * 1.2, sampling_frequency / 2],
                               [0, 0, 1, 1], fs=sampling_frequency)
+    return bandpass
 
 
 def dmas_image(aperture_data, sampling_frequency, pulse_frequency):
@@ -31,7 +32,7 @@ def dmas_image(aperture_data, sampling_frequency, pulse_frequency):
 def dmas(aperture_data, sampling_frequency, pulse_frequency):
     bandpass = dmas_bandpass(sampling_frequency, pulse_frequency)
     if aperture_data.ndim == 3:
-        bandpass = np.expand_dims(bandpass, axis=1)
+        bandpass = np.expand_dims(bandpass, axis=-1)
     n = aperture_data.shape[0]
     result = 0.0 * aperture_data[0, :]
     for i in range(0, n - 1):

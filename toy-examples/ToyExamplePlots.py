@@ -9,6 +9,7 @@ import bf.slsc
 import bf.dmas
 import bf.imap
 import bf.pdas
+import bf.mv
 from typing import Union, List
 import os
 
@@ -20,7 +21,6 @@ plt.rcParams['figure.subplot.bottom'] = 0.21  # 0.11
 plt.rcParams['axes.formatter.limits'] = [-4, 4]  # (default: [-5, 6]).
 plt.rcParams["axes.formatter.useoffset"] = False
 plt.rcParams["axes.formatter.use_mathtext"] = True
-
 
 GCF_M = 1
 
@@ -336,6 +336,22 @@ def pdas_plots(data):
                        r'$\textrm{p-DAS}_3$ focus', r'$\textrm{p-DAS}_3$ side', r'$\textrm{p-DAS}_3$ image'])
 
 
+def mv_plots(data):
+    subaperture_length = int(math.floor(data['pulse_focus'].shape[0] / 2))
+    temp_kernel_length = 3
+    diagonal_loading_factor = 1 / (100 * subaperture_length)
+    mv_focus, weights_focus = bf.mv.mv(data['pulse_focus'], subaperture_length, temp_kernel_length,
+                                       diagonal_loading_factor)
+    mv_side, weights_side = bf.mv.mv(data['pulse_side'], subaperture_length, temp_kernel_length,
+                                     diagonal_loading_factor)
+
+    img_mv, _ = bf.mv.mv(data['line_aperture_data'], subaperture_length, temp_kernel_length, diagonal_loading_factor)
+
+    plot_multi('MV',
+               [mv_focus, weights_focus, mv_side, weights_side, img_mv.T],
+               titles=['MV focus', 'MV weights focus', 'MV side', 'MV weights side', 'MV image'])
+
+
 def beamformed_plots(data):
     line_aperture_data = data['line_aperture_data']
     sampling_frequency = data['params']['sampling_frequency']
@@ -396,9 +412,12 @@ def create_plots():
     slsc_plots(data)
     dmas_plots(data)
     pdas_plots(data)
+    mv_plots(data)
 
-    # beamformed_plots(data)
+    # # beamformed_plots(data)
+
     save_figures('plots')
+
     plt.show()
     pass
 
