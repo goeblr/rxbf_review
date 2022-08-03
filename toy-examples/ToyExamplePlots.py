@@ -3,7 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal
 import math
-import bf
+import bf.das
+import bf.coherence
+import bf.slsc
+import bf.dmas
+import bf.imap
+import bf.pdas
 from typing import Union, List
 import os
 
@@ -16,9 +21,6 @@ plt.rcParams['axes.formatter.limits'] = [-4, 4]  # (default: [-5, 6]).
 plt.rcParams["axes.formatter.useoffset"] = False
 plt.rcParams["axes.formatter.use_mathtext"] = True
 
-# TITLE_FOCUS = 'in focus'
-# TITLE_SIDE = 'out of focus'
-# TITLE_IMAGE = 'Image'
 
 GCF_M = 1
 
@@ -185,10 +187,10 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
 
 
 def das_plots(data):
-    das_focus = bf.das(data['pulse_focus'])
-    das_side = bf.das(data['pulse_side'])
+    das_focus = bf.das.das(data['pulse_focus'])
+    das_side = bf.das.das(data['pulse_side'])
 
-    img_das = bf.das(data['line_aperture_data'])
+    img_das = bf.das.das(data['line_aperture_data'])
 
     plot_multi('DAS',
                [data['pulse_channel_data'], data['pulse_focus'], das_focus, data['pulse_side'], das_side, img_das.T],
@@ -196,10 +198,10 @@ def das_plots(data):
 
 
 def cf_plots(data):
-    cf_focus = bf.cf(data['pulse_focus'])
-    cf_side = bf.cf(data['pulse_side'])
+    cf_focus = bf.coherence.cf(data['pulse_focus'])
+    cf_side = bf.coherence.cf(data['pulse_side'])
 
-    img_cf, img_cf_weight = bf.cf(data['line_aperture_data'])
+    img_cf, img_cf_weight = bf.coherence.cf(data['line_aperture_data'])
 
     plot_multi('CF',
                [cf_focus[0], cf_focus[1], cf_side[0], cf_side[1], img_cf.T, img_cf_weight.T],
@@ -208,9 +210,9 @@ def cf_plots(data):
 
 
 def gcf_plots(data):
-    gcf_focus = bf.gcf(data['pulse_focus'], GCF_M)
-    gcf_side = bf.gcf(data['pulse_side'], GCF_M)
-    img_gcf, img_gcf_weight = bf.gcf(data['line_aperture_data'], GCF_M)
+    gcf_focus = bf.coherence.gcf(data['pulse_focus'], GCF_M)
+    gcf_side = bf.coherence.gcf(data['pulse_side'], GCF_M)
+    img_gcf, img_gcf_weight = bf.coherence.gcf(data['line_aperture_data'], GCF_M)
 
     plot_multi('GCF',
                [gcf_focus[0], gcf_focus[1], gcf_side[0], gcf_side[1], img_gcf.T, img_gcf_weight.T],
@@ -219,10 +221,10 @@ def gcf_plots(data):
 
 
 def pcf_plots(data):
-    pcf_focus = bf.pcf(data['pulse_focus'])
-    pcf_side = bf.pcf(data['pulse_side'])
+    pcf_focus = bf.coherence.pcf(data['pulse_focus'])
+    pcf_side = bf.coherence.pcf(data['pulse_side'])
 
-    img_pcf, img_pcf_weight = bf.pcf(data['line_aperture_data'])
+    img_pcf, img_pcf_weight = bf.coherence.pcf(data['line_aperture_data'])
 
     plot_multi('PCF',
                [pcf_focus[0], pcf_focus[1], pcf_side[0], pcf_side[1], img_pcf.T, img_pcf_weight.T],
@@ -231,10 +233,10 @@ def pcf_plots(data):
 
 
 def scf_plots(data):
-    scf_focus = bf.scf(data['pulse_focus'])
-    scf_side = bf.scf(data['pulse_side'])
+    scf_focus = bf.coherence.scf(data['pulse_focus'])
+    scf_side = bf.coherence.scf(data['pulse_side'])
 
-    img_scf, img_scf_weight = bf.scf(data['line_aperture_data'])
+    img_scf, img_scf_weight = bf.coherence.scf(data['line_aperture_data'])
 
     plot_multi('SCF',
                [scf_focus[0], scf_focus[1], scf_side[0], scf_side[1], img_scf.T, img_scf_weight.T],
@@ -256,10 +258,10 @@ def imap_plots(data):
     #     normalization=['individual', 'individual_positive', 'individual_positive',
     #                    'individual', 'individual_positive', 'individual_positive', 'individual'])
 
-    imap2_focus = bf.imap(data['pulse_focus'], 2)
-    imap2_side = bf.imap(data['pulse_side'], 2)
+    imap2_focus = bf.imap.imap(data['pulse_focus'], 2)
+    imap2_side = bf.imap.imap(data['pulse_side'], 2)
 
-    img_imap2, _, _ = bf.imap(data['line_aperture_data'], 2)
+    img_imap2, _, _ = bf.imap.imap(data['line_aperture_data'], 2)
 
     plot_multi('IMAP2',
                [imap2_focus[0], imap2_focus[1], imap2_focus[2],
@@ -275,12 +277,12 @@ def slsc_plots(data):
     pulse_frequency = data['params']['pulse_frequency']
     temp_kernel_length = int(round(sampling_frequency / pulse_frequency))
 
-    slsc_focus = bf.slsc(data['pulse_focus'], 10, temp_kernel_length)
-    slsc_side = bf.slsc(data['pulse_side'], 10, temp_kernel_length)
-    sc_image_focus = bf.slsc_spatial_correlation_image(data['pulse_focus'], temp_kernel_length)
-    sc_image_side = bf.slsc_spatial_correlation_image(data['pulse_side'], temp_kernel_length)
+    slsc_focus = bf.slsc.slsc(data['pulse_focus'], 10, temp_kernel_length)
+    slsc_side = bf.slsc.slsc(data['pulse_side'], 10, temp_kernel_length)
+    sc_image_focus = bf.slsc.slsc_spatial_correlation_image(data['pulse_focus'], temp_kernel_length)
+    sc_image_side = bf.slsc.slsc_spatial_correlation_image(data['pulse_side'], temp_kernel_length)
 
-    img_slsc = bf.slsc(data['line_aperture_data'], 10, temp_kernel_length)
+    img_slsc = bf.slsc.slsc(data['line_aperture_data'], 10, temp_kernel_length)
 
     plot_multi('SLSC',
                [slsc_focus, sc_image_focus,
@@ -294,14 +296,14 @@ def slsc_plots(data):
 def dmas_plots(data):
     sampling_frequency = data['params']['sampling_frequency']
     pulse_frequency = data['params']['pulse_frequency']
-    dmas_focus, fdmas_focus = bf.dmas(data['pulse_focus'], sampling_frequency, pulse_frequency)
-    dmas_side, fdmas_side = bf.dmas(data['pulse_side'], sampling_frequency, pulse_frequency)
+    dmas_focus, fdmas_focus = bf.dmas.dmas(data['pulse_focus'], sampling_frequency, pulse_frequency)
+    dmas_side, fdmas_side = bf.dmas.dmas(data['pulse_side'], sampling_frequency, pulse_frequency)
 
-    _, img_fdmas = bf.dmas(data['line_aperture_data'], sampling_frequency, pulse_frequency)
+    _, img_fdmas = bf.dmas.dmas(data['line_aperture_data'], sampling_frequency, pulse_frequency)
 
     # Insight images
-    # dmas_image_focus = bf.dmas_image(data['pulse_focus'], sampling_frequency, pulse_frequency)
-    # dmas_image_side = bf.dmas_image(data['pulse_side'], sampling_frequency, pulse_frequency)
+    # dmas_image_focus = bf.dmas.dmas_image(data['pulse_focus'], sampling_frequency, pulse_frequency)
+    # dmas_image_side = bf.dmas.dmas_image(data['pulse_side'], sampling_frequency, pulse_frequency)
 
     plot_multi('DMAS',
                [dmas_focus, fdmas_focus,
@@ -320,13 +322,13 @@ def dmas_plots(data):
 
 
 def pdas_plots(data):
-    pdas_2_focus = bf.pdas(data['pulse_focus'], 2.0)
-    pdas_2_side = bf.pdas(data['pulse_side'], 2.0)
-    pdas_3_focus = bf.pdas(data['pulse_focus'], 3.0)
-    pdas_3_side = bf.pdas(data['pulse_side'], 3.0)
+    pdas_2_focus = bf.pdas.pdas(data['pulse_focus'], 2.0)
+    pdas_2_side = bf.pdas.pdas(data['pulse_side'], 2.0)
+    pdas_3_focus = bf.pdas.pdas(data['pulse_focus'], 3.0)
+    pdas_3_side = bf.pdas.pdas(data['pulse_side'], 3.0)
 
-    img_pdas2 = bf.pdas(data['line_aperture_data'], 2)
-    img_pdas3 = bf.pdas(data['line_aperture_data'], 3)
+    img_pdas2 = bf.pdas.pdas(data['line_aperture_data'], 2)
+    img_pdas3 = bf.pdas.pdas(data['line_aperture_data'], 3)
 
     plot_multi('PDAS',
                [pdas_2_focus, pdas_2_side, img_pdas2.T, pdas_3_focus, pdas_3_side, img_pdas3.T],
@@ -340,17 +342,17 @@ def beamformed_plots(data):
     pulse_frequency = data['params']['pulse_frequency']
     temp_kernel_length = int(round(sampling_frequency / pulse_frequency))
 
-    img_das = bf.das(line_aperture_data)
-    img_cf, _ = bf.cf(line_aperture_data)
-    img_gcf, _ = bf.gcf(line_aperture_data, GCF_M)
-    img_pcf, _ = bf.pcf(line_aperture_data)
-    img_scf, _ = bf.scf(line_aperture_data)
-    img_imap1, _, _ = bf.imap(line_aperture_data, 1)
-    img_imap2, _, _ = bf.imap(line_aperture_data, 2)
-    img_slsc = bf.slsc(line_aperture_data, 10, temp_kernel_length)
-    img_dmas, img_fdmas = bf.dmas(line_aperture_data, sampling_frequency, pulse_frequency)
-    img_pdas2 = bf.pdas(line_aperture_data, 2)
-    img_pdas3 = bf.pdas(line_aperture_data, 3)
+    img_das = bf.das.das(line_aperture_data)
+    img_cf, _ = bf.coherence.cf(line_aperture_data)
+    img_gcf, _ = bf.coherence.gcf(line_aperture_data, GCF_M)
+    img_pcf, _ = bf.coherence.pcf(line_aperture_data)
+    img_scf, _ = bf.coherence.scf(line_aperture_data)
+    img_imap1, _, _ = bf.imap.imap(line_aperture_data, 1)
+    img_imap2, _, _ = bf.imap.imap(line_aperture_data, 2)
+    img_slsc = bf.slsc.slsc(line_aperture_data, 10, temp_kernel_length)
+    img_dmas, img_fdmas = bf.dmas.dmas(line_aperture_data, sampling_frequency, pulse_frequency)
+    img_pdas2 = bf.pdas.pdas(line_aperture_data, 2)
+    img_pdas3 = bf.pdas.pdas(line_aperture_data, 3)
 
     plot_multi('Beamformed',
                [img_das.T, img_cf.T, img_gcf.T, img_pcf.T, img_scf.T, img_imap1.T, img_imap2.T,
