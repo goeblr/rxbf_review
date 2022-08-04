@@ -83,7 +83,7 @@ def create_data():
             'line_aperture_data': line_aperture_data, 'params': params}
 
 
-def plot_2d(data, ax, normalization):
+def plot_2d(data, ax, normalization, interpolation):
     cmap = 'gray'
     # cmap = 'cmr.wildfire'
     # cmap = 'cmr.iceburn'
@@ -107,7 +107,7 @@ def plot_2d(data, ax, normalization):
         v_max = 1
     else:
         raise RuntimeError('Not implemented')
-    ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, aspect='auto')
+    ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, aspect='auto', interpolation=interpolation)
     # for speed
     # ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, interpolation='nearest', aspect='auto')
 
@@ -158,11 +158,14 @@ def plot_1d(data, ax, normalization):
     # ax.xaxis.set_tick_params(rotation=45)
 
 
-def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[str], str] = 'individual'):
+def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[str], str] = 'individual',
+               interpolation=None):
     num_plots = len(datas)
 
     if not isinstance(normalization, list):
         normalization = [normalization] * num_plots
+    if not isinstance(interpolation, list):
+        interpolation = [interpolation] * num_plots
 
     # width_ratios = [1 if data.ndim == 2 else 0.1 for data in datas]
     width_ratios = [1 if isinstance(data, np.ndarray) and data.ndim == 2 else 1 for data in datas]
@@ -178,7 +181,7 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         elif data.ndim == 1:
             plot_1d(data, ax, normalization[data_idx])
         elif data.ndim == 2:
-            plot_2d(data, ax, normalization[data_idx])
+            plot_2d(data, ax, normalization[data_idx], interpolation[data_idx])
         try:
             ax.set_title(titles[data_idx])
         except:
@@ -340,16 +343,43 @@ def mv_plots(data):
     subaperture_length = int(math.floor(data['pulse_focus'].shape[0] / 2))
     temp_kernel_length = 3
     diagonal_loading_factor = 1 / (100 * subaperture_length)
-    mv_focus, weights_focus = bf.mv.mv(data['pulse_focus'], subaperture_length, temp_kernel_length,
-                                       diagonal_loading_factor)
-    mv_side, weights_side = bf.mv.mv(data['pulse_side'], subaperture_length, temp_kernel_length,
-                                     diagonal_loading_factor)
+    method = 'synnevag2009'
+    mv_focus, weights_focus, _ = bf.mv.mv(data['pulse_focus'], subaperture_length, temp_kernel_length,
+                                          diagonal_loading_factor, method=method)
+    mv_side, weights_side, _ = bf.mv.mv(data['pulse_side'], subaperture_length, temp_kernel_length,
+                                        diagonal_loading_factor, method=method)
 
-    img_mv, _ = bf.mv.mv(data['line_aperture_data'], subaperture_length, temp_kernel_length, diagonal_loading_factor)
+    img_mv, _, _ = bf.mv.mv(data['line_aperture_data'], subaperture_length, temp_kernel_length, diagonal_loading_factor,
+                            method=method)
 
     plot_multi('MV',
                [mv_focus, weights_focus, mv_side, weights_side, img_mv.T],
-               titles=['MV focus', 'MV weights focus', 'MV side', 'MV weights side', 'MV image'])
+               titles=['MV focus', 'weights $w(t)$ focus', 'MV side', 'weights $w(t)$ side', 'MV image'])
+
+
+def bsmv_plots(data):
+    subaperture_length = int(math.floor(data['pulse_focus'].shape[0] / 2))
+    temp_kernel_length = 3
+    diagonal_loading_factor = 1 / (100 * subaperture_length)
+    subspace_dimension = 3
+    method = 'deylami2017'
+    bsmv_focus, weights_focus, subaperture_focus = bf.mv.mv(data['pulse_focus'], subaperture_length, temp_kernel_length,
+                                                            diagonal_loading_factor, method=method,
+                                                            subspace_dimension=subspace_dimension)
+    bsmv_side, weights_side, subaperture_side = bf.mv.mv(data['pulse_side'], subaperture_length, temp_kernel_length,
+                                                         diagonal_loading_factor, method=method,
+                                                         subspace_dimension=subspace_dimension)
+
+    img_bsmv, _, _ = bf.mv.mv(data['line_aperture_data'], subaperture_length, temp_kernel_length,
+                              diagonal_loading_factor,
+                              method=method, subspace_dimension=subspace_dimension)
+
+    plot_multi('BSMV',
+               [bsmv_focus, subaperture_focus, weights_focus, bsmv_side, subaperture_side, weights_side, img_bsmv.T],
+               titles=['BS-MV focus', 'beamspace signal', 'weights $w(t)$ focus',
+                       'BS-MV side', 'beamspace signal', 'weights $w(t)$ side', 'BS-MV image'],
+               interpolation=[None, 'nearest', 'nearest',
+                              None, 'nearest', 'nearest', None])
 
 
 def beamformed_plots(data):
@@ -413,6 +443,7 @@ def create_plots():
     dmas_plots(data)
     pdas_plots(data)
     mv_plots(data)
+    bsmv_plots(data)
 
     # # beamformed_plots(data)
 
