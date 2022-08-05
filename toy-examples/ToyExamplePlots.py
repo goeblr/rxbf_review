@@ -15,7 +15,7 @@ import os
 
 plt.rcParams['text.usetex'] = True
 plt.rcParams['font.size'] = 8
-plt.rcParams['figure.subplot.left'] = 0.025  # 0.125
+plt.rcParams['figure.subplot.left'] = 0.035  # 0.125
 plt.rcParams['figure.subplot.right'] = 0.975  # 0.9
 plt.rcParams['figure.subplot.bottom'] = 0.21  # 0.11
 plt.rcParams['axes.formatter.limits'] = [-4, 4]  # (default: [-5, 6]).
@@ -75,15 +75,20 @@ def create_data():
     pulse_side = line_aperture_data[:, :, pulse_side_line_idx]
     pulse_side_distance = line_offsets[pulse_side_line_idx]
 
+    image_tick_labels = line_offsets[127:0:-21]
+    image_tick_labels = [f'${x:.1f}$' if idx % 2 == 0 else None for idx, x in enumerate(image_tick_labels)]
+    image_ticks = [list(range(0, 127, 21)), image_tick_labels]
+
     # pulse_clutter = 0.5 * pulse_focus + 0.5 * pulse_side
     params = {'pulse_frequency': pulse_frequency, 'sampling_frequency': sampling_frequency,
-              'line_offsets': line_offsets, 'pulse_side_distance': pulse_side_distance}
+              'line_offsets': line_offsets, 'pulse_side_distance': pulse_side_distance, 'image_ticks': image_ticks}
 
     return {'pulse_focus': pulse_focus, 'pulse_side': pulse_side, 'pulse_channel_data': pulse_channel_data,
             'line_aperture_data': line_aperture_data, 'params': params}
 
 
-def plot_2d(data, ax, normalization, interpolation):
+# xticks: None, 'FirstLastIndex',  <List of indices list and labels list>, Int for every x-th tick centered around 1
+def plot_2d(data, ax, normalization, interpolation, xticks):
     cmap = 'gray'
     # cmap = 'cmr.wildfire'
     # cmap = 'cmr.iceburn'
@@ -111,11 +116,22 @@ def plot_2d(data, ax, normalization, interpolation):
     # for speed
     # ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, interpolation='nearest', aspect='auto')
 
-    # w = data.shape[1]
+    w = data.shape[1]
     # h = data.shape[0]
 
-    ax.set_xticks([])
     ax.set_yticks([])
+
+    if xticks is None:
+        ax.set_xticks([])
+    elif xticks == 'FirstLastIdx':
+        ax.set_xticks([0, w - 1])
+        ax.set_xticklabels([1, w])
+    elif isinstance(xticks, int):
+        ax.set_xticks(np.arange(0, w, xticks))
+        ax.set_xticklabels(np.arange(1, w + 1, xticks))
+    elif isinstance(xticks, list) or isinstance(xticks, tuple):
+        ax.set_xticks(xticks[0])
+        ax.set_xticklabels(xticks[1])
 
     # Major ticks
     # ax.set_xticks(np.arange(0, w, 1))
@@ -159,13 +175,17 @@ def plot_1d(data, ax, normalization):
 
 
 def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[str], str] = 'individual',
-               interpolation=None):
+               interpolation=None, xlabels: List[str] = None, xticks=None):
     num_plots = len(datas)
 
     if not isinstance(normalization, list):
         normalization = [normalization] * num_plots
     if not isinstance(interpolation, list):
         interpolation = [interpolation] * num_plots
+    if not isinstance(xlabels, list):
+        xlabels = [xlabels] * num_plots
+    if not isinstance(xticks, list):
+        xticks = [xticks] * num_plots
 
     # width_ratios = [1 if data.ndim == 2 else 0.1 for data in datas]
     width_ratios = [1 if isinstance(data, np.ndarray) and data.ndim == 2 else 1 for data in datas]
@@ -181,11 +201,15 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         elif data.ndim == 1:
             plot_1d(data, ax, normalization[data_idx])
         elif data.ndim == 2:
-            plot_2d(data, ax, normalization[data_idx], interpolation[data_idx])
+            plot_2d(data, ax, normalization[data_idx], interpolation[data_idx], xticks[data_idx])
         try:
             ax.set_title(titles[data_idx])
         except:
             pass
+        if data_idx == 0:
+            ax.set_ylabel('Depth')
+        if xlabels[data_idx] is not None:
+            ax.set_xlabel(xlabels[data_idx])
     return fig
 
 
@@ -197,7 +221,9 @@ def das_plots(data):
 
     plot_multi('DAS',
                [data['pulse_channel_data'], data['pulse_focus'], das_focus, data['pulse_side'], das_side, img_das.T],
-               titles=['channel data', 'in focus', 'DAS focus', 'side', 'DAS side', 'DAS image'])
+               titles=['channel data', 'in focus', 'DAS focus', 'side', 'DAS side', 'DAS image'],
+               xlabels=['Channels', 'Aperture', None, 'Aperture', None, 'Width [mm]'],
+               xticks=['FirstLastIdx', 'FirstLastIdx', None, 'FirstLastIdx', None, data['params']['image_ticks']])
 
 
 def cf_plots(data):
@@ -209,7 +235,9 @@ def cf_plots(data):
     plot_multi('CF',
                [cf_focus[0], cf_focus[1], cf_side[0], cf_side[1], img_cf.T, img_cf_weight.T],
                titles=['CF+DAS focus', 'CF focus', 'CF+DAS side', 'CF side', 'CF image', 'CF weight'],
-               normalization=['individual', '01', 'individual', '01', 'individual', '01'])
+               normalization=['individual', '01', 'individual', '01', 'individual', '01'],
+               xlabels=[None, None, None, None, 'Width [mm]', 'Width [mm]'],
+               xticks=[None, None, None, None, data['params']['image_ticks'], data['params']['image_ticks']])
 
 
 def gcf_plots(data):
@@ -220,7 +248,9 @@ def gcf_plots(data):
     plot_multi('GCF',
                [gcf_focus[0], gcf_focus[1], gcf_side[0], gcf_side[1], img_gcf.T, img_gcf_weight.T],
                titles=['GCF+DAS focus', 'GCF focus', 'GCF+DAS side', 'GCF side', 'GCF image', 'GCF weight'],
-               normalization=['individual', '01', 'individual', '01', 'individual', '01'])
+               normalization=['individual', '01', 'individual', '01', 'individual', '01'],
+               xlabels=[None, None, None, None, 'Width [mm]', 'Width [mm]'],
+               xticks=[None, None, None, None, data['params']['image_ticks'], data['params']['image_ticks']])
 
 
 def pcf_plots(data):
@@ -232,7 +262,9 @@ def pcf_plots(data):
     plot_multi('PCF',
                [pcf_focus[0], pcf_focus[1], pcf_side[0], pcf_side[1], img_pcf.T, img_pcf_weight.T],
                titles=['PCF+DAS focus', 'PCF focus', 'PCF+DAS side', 'PCF side', 'PCF image', 'PCF weight'],
-               normalization=['individual', '01', 'individual', '01', 'individual', '01'])
+               normalization=['individual', '01', 'individual', '01', 'individual', '01'],
+               xlabels=[None, None, None, None, 'Width [mm]', 'Width [mm]'],
+               xticks=[None, None, None, None, data['params']['image_ticks'], data['params']['image_ticks']])
 
 
 def scf_plots(data):
@@ -244,7 +276,9 @@ def scf_plots(data):
     plot_multi('SCF',
                [scf_focus[0], scf_focus[1], scf_side[0], scf_side[1], img_scf.T, img_scf_weight.T],
                titles=['SCF+DAS focus', 'SCF focus', 'SCF+DAS side', 'SCF side', 'SCF image', 'SCF weight'],
-               normalization=['individual', '01', 'individual', '01', 'individual', '01'])
+               normalization=['individual', '01', 'individual', '01', 'individual', '01'],
+               xlabels=[None, None, None, None, 'Width [mm]', 'Width [mm]'],
+               xticks=[None, None, None, None, data['params']['image_ticks'], data['params']['image_ticks']])
 
 
 def imap_plots(data):
@@ -272,7 +306,9 @@ def imap_plots(data):
                titles=[r'$\textrm{iMAP}_2$ focus', r'$\sigma_y$ focus', r'$\sigma_n$ focus',
                        r'$\textrm{iMAP}_2$ side', r'$\sigma_y$ side', r'$\sigma_n$ side', r'$\textrm{iMAP}_2$ image'],
                normalization=['individual', 'individual_positive', 'individual_positive',
-                              'individual', 'individual_positive', 'individual_positive', 'individual'])
+                              'individual', 'individual_positive', 'individual_positive', 'individual'],
+               xlabels=[None, None, None, None, None, None, 'Width [mm]'],
+               xticks=[None, None, None, None, None, None, data['params']['image_ticks']])
 
 
 def slsc_plots(data):
@@ -280,12 +316,13 @@ def slsc_plots(data):
     pulse_frequency = data['params']['pulse_frequency']
     temp_kernel_length = int(round(sampling_frequency / pulse_frequency))
 
-    slsc_focus = bf.slsc.slsc(data['pulse_focus'], 10, temp_kernel_length)
-    slsc_side = bf.slsc.slsc(data['pulse_side'], 10, temp_kernel_length)
+    big_m = 8  # equivalent to Q = 20% for aperture size of 40
+    slsc_focus = bf.slsc.slsc(data['pulse_focus'], big_m, temp_kernel_length)
+    slsc_side = bf.slsc.slsc(data['pulse_side'], big_m, temp_kernel_length)
     sc_image_focus = bf.slsc.slsc_spatial_correlation_image(data['pulse_focus'], temp_kernel_length)
     sc_image_side = bf.slsc.slsc_spatial_correlation_image(data['pulse_side'], temp_kernel_length)
 
-    img_slsc = bf.slsc.slsc(data['line_aperture_data'], 10, temp_kernel_length)
+    img_slsc = bf.slsc.slsc(data['line_aperture_data'], big_m, temp_kernel_length)
 
     plot_multi('SLSC',
                [slsc_focus, sc_image_focus,
@@ -293,7 +330,9 @@ def slsc_plots(data):
                titles=['SLSC focus', r'spatial corr. $\tilde{R}(m)$',
                        'SLSC side', r'spatial corr. $\tilde{R}(m)$', 'SLSC image'],
                normalization=['individual_positive', 'individual',
-                              'individual_positive', 'individual', 'individual_positive'])
+                              'individual_positive', 'individual', 'individual_positive'],
+               xlabels=[None, '$m$', None, '$m$', 'Width [mm]'],
+               xticks=[None, 10, None, 10, data['params']['image_ticks']])
 
 
 def dmas_plots(data):
@@ -312,7 +351,9 @@ def dmas_plots(data):
                [dmas_focus, fdmas_focus,
                 dmas_side, fdmas_side, img_fdmas.T],
                titles=['DMAS focus', 'F-DMAS focus',
-                       'DMAS side', 'F-DMAS side', 'F-DMAS image'])
+                       'DMAS side', 'F-DMAS side', 'F-DMAS image'],
+               xlabels=[None, None, None, None, 'Width [mm]'],
+               xticks=[None, None, None, None, data['params']['image_ticks']])
 
     # Plot insight images
     # fig, axs = plt.subplots(2, 1)
@@ -334,9 +375,14 @@ def pdas_plots(data):
     img_pdas3 = bf.pdas.pdas(data['line_aperture_data'], 3)
 
     plot_multi('PDAS',
-               [pdas_2_focus, pdas_2_side, img_pdas2.T, pdas_3_focus, pdas_3_side, img_pdas3.T],
+               [pdas_2_focus, pdas_2_side, img_pdas2.T,
+                pdas_3_focus, pdas_3_side, img_pdas3.T],
                titles=[r'$\textrm{p-DAS}_2$ focus', r'$\textrm{p-DAS}_2$ side', r'$\textrm{p-DAS}_2$ image',
-                       r'$\textrm{p-DAS}_3$ focus', r'$\textrm{p-DAS}_3$ side', r'$\textrm{p-DAS}_3$ image'])
+                       r'$\textrm{p-DAS}_3$ focus', r'$\textrm{p-DAS}_3$ side', r'$\textrm{p-DAS}_3$ image'],
+               xlabels=[None, None, 'Width [mm]',
+                        None, None, 'Width [mm]'],
+               xticks=[None, None, data['params']['image_ticks'],
+                       None, None, data['params']['image_ticks']])
 
 
 def mv_plots(data):
@@ -354,7 +400,9 @@ def mv_plots(data):
 
     plot_multi('MV',
                [mv_focus, weights_focus, mv_side, weights_side, img_mv.T],
-               titles=['MV focus', 'weights $w(t)$ focus', 'MV side', 'weights $w(t)$ side', 'MV image'])
+               titles=['MV focus', 'weights $w(t)$ focus', 'MV side', 'weights $w(t)$ side', 'MV image'],
+               xlabels=[None, 'Sub-aperture', None, 'Sub-aperture', 'Width [mm]'],
+               xticks=[None, 'FirstLastIdx', None, 'FirstLastIdx', data['params']['image_ticks']])
 
 
 def bsmv_plots(data):
@@ -379,7 +427,11 @@ def bsmv_plots(data):
                titles=['BS-MV focus', 'beamspace signal', 'weights $w(t)$ focus',
                        'BS-MV side', 'beamspace signal', 'weights $w(t)$ side', 'BS-MV image'],
                interpolation=[None, 'nearest', 'nearest',
-                              None, 'nearest', 'nearest', None])
+                              None, 'nearest', 'nearest', None],
+               xlabels=[None, 'Sub-aperture', 'Sub-aperture',
+                        None, 'Sub-aperture', 'Sub-aperture', 'Width [mm]'],
+               xticks=[None, 1, 1,
+                       None, 1, 1, data['params']['image_ticks']])
 
 
 def beamformed_plots(data):
