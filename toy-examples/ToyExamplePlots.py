@@ -40,9 +40,14 @@ def create_data():
 
     pulse_frequency = 7e6
     pulse_bandwidth = 0.40
-    pulse_side_line_idx = 21
+    pulse_side_line_idx = 20
+    # determined through:
+    # pulse_side_ext = np.concatenate((np.zeros(pulse_side.shape), pulse_side, np.zeros(pulse_side.shape)), 1)
+    # plt.plot([np.max(scipy.signal.convolve(pulse_side_ext, line_aperture_data[:, :, i], 'same').flatten()) for i in
+    #           range(line_aperture_data.shape[-1])])
+    # and selecting the index with the largest correlation value
 
-    # pulse_side_phase_total = 2 * math.pi
+    pulse_side_phase_total = 2 * math.pi
 
     def pulse(t_center):
         t = np.linspace(-num_samples / 2 / sampling_frequency - t_center,
@@ -51,9 +56,9 @@ def create_data():
 
     pulse_focus = np.tile(pulse(0), [num_elements, 1])
 
-    # phases = np.linspace(-pulse_side_phase_total / 2, pulse_side_phase_total / 2, num_elements)
-    # t_centers = phases / (2.0 * math.pi * pulse_frequency)
-    # pulse_side = np.stack([pulse(t_center) for t_center in t_centers])
+    phases = np.linspace(-pulse_side_phase_total / 2, pulse_side_phase_total / 2, num_elements)
+    t_centers = phases / (2.0 * math.pi * pulse_frequency)
+    pulse_side = np.stack([pulse(t_center) for t_center in t_centers])
 
     element_positions = np.linspace(-num_elements / 2 * element_spacing,
                                     num_elements / 2 * element_spacing,
@@ -72,7 +77,7 @@ def create_data():
         line_aperture_data[:, :, line_idx] = np.stack(
             [pulse(t_center - t_delay) for t_center, t_delay in zip(t_centers, t_delays)])
 
-    pulse_side = line_aperture_data[:, :, pulse_side_line_idx]
+    # pulse_side = line_aperture_data[:, :, pulse_side_line_idx]
     pulse_side_distance = line_offsets[pulse_side_line_idx]
 
     image_tick_labels = line_offsets[127:0:-21]
