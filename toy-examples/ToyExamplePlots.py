@@ -207,10 +207,13 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
             plot_1d(data, ax, normalization[data_idx])
         elif data.ndim == 2:
             plot_2d(data, ax, normalization[data_idx], interpolation[data_idx], xticks[data_idx])
+
+        figure_title = f'({chr(97 + data_idx)})'
         try:
-            ax.set_title(titles[data_idx])
+            figure_title = f'{figure_title} {titles[data_idx]}'
         except:
             pass
+        ax.set_title(figure_title)
         if data_idx == 0:
             ax.set_ylabel('Depth')
         if xlabels[data_idx] is not None:
@@ -405,7 +408,7 @@ def mv_plots(data):
 
     plot_multi('MV',
                [mv_focus, weights_focus, mv_side, weights_side, img_mv.T],
-               titles=['MV focus', 'weights $w(t)$ focus', 'MV side', 'weights $w(t)$ side', 'MV image'],
+               titles=['MV focus', '$w(t)$ focus', 'MV side', '$w(t)$ side', 'MV image'],
                xlabels=[None, 'Sub-aperture', None, 'Sub-aperture', 'Width [mm]'],
                xticks=[None, 'FirstLastIdx', None, 'FirstLastIdx', data['params']['image_ticks']])
 
@@ -429,8 +432,8 @@ def bsmv_plots(data):
 
     plot_multi('BSMV',
                [bsmv_focus, subaperture_focus, weights_focus, bsmv_side, subaperture_side, weights_side, img_bsmv.T],
-               titles=['BS-MV focus', 'beamspace signal', 'weights $w(t)$ focus',
-                       'BS-MV side', 'beamspace signal', 'weights $w(t)$ side', 'BS-MV image'],
+               titles=['BSMV focus', 'BS signal', '$w(t)$ focus',
+                       'BSMV side', 'BS signal', '$w(t)$ side', 'BSMV image'],
                interpolation=[None, 'nearest', 'nearest',
                               None, 'nearest', 'nearest', None],
                xlabels=[None, 'Sub-aperture', 'Sub-aperture',
