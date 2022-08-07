@@ -395,7 +395,9 @@ def pdas_plots(data):
 
 def mv_plots(data):
     subaperture_length = int(math.floor(data['pulse_focus'].shape[0] / 2))
-    temp_kernel_length = 3
+    sampling_frequency = data['params']['sampling_frequency']
+    pulse_frequency = data['params']['pulse_frequency']
+    temp_kernel_length = int(round(sampling_frequency / pulse_frequency))
     diagonal_loading_factor = 1 / (100 * subaperture_length)
     method = 'synnevag2009'
     mv_focus, weights_focus, _ = bf.mv.mv(data['pulse_focus'], subaperture_length, temp_kernel_length,
@@ -415,7 +417,9 @@ def mv_plots(data):
 
 def bsmv_plots(data):
     subaperture_length = int(math.floor(data['pulse_focus'].shape[0] / 2))
-    temp_kernel_length = 3
+    sampling_frequency = data['params']['sampling_frequency']
+    pulse_frequency = data['params']['pulse_frequency']
+    temp_kernel_length = int(round(sampling_frequency / pulse_frequency))
     diagonal_loading_factor = 1 / (100 * subaperture_length)
     subspace_dimension = 3
     method = 'deylami2017'
