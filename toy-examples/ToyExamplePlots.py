@@ -374,13 +374,16 @@ def dmas_plots(data):
 
 
 def pdas_plots(data):
-    pdas_2_focus = bf.pdas.pdas(data['pulse_focus'], 2.0)
-    pdas_2_side = bf.pdas.pdas(data['pulse_side'], 2.0)
-    pdas_3_focus = bf.pdas.pdas(data['pulse_focus'], 3.0)
-    pdas_3_side = bf.pdas.pdas(data['pulse_side'], 3.0)
+    sampling_frequency = data['params']['sampling_frequency']
+    pulse_frequency = data['params']['pulse_frequency']
 
-    img_pdas2 = bf.pdas.pdas(data['line_aperture_data'], 2)
-    img_pdas3 = bf.pdas.pdas(data['line_aperture_data'], 3)
+    pdas_2_focus = bf.pdas.pdas(data['pulse_focus'], 2.0, sampling_frequency, pulse_frequency)
+    pdas_2_side = bf.pdas.pdas(data['pulse_side'], 2.0, sampling_frequency, pulse_frequency)
+    pdas_3_focus = bf.pdas.pdas(data['pulse_focus'], 3.0, sampling_frequency, pulse_frequency)
+    pdas_3_side = bf.pdas.pdas(data['pulse_side'], 3.0, sampling_frequency, pulse_frequency)
+
+    img_pdas2 = bf.pdas.pdas(data['line_aperture_data'], 2, sampling_frequency, pulse_frequency)
+    img_pdas3 = bf.pdas.pdas(data['line_aperture_data'], 3, sampling_frequency, pulse_frequency)
 
     plot_multi('PDAS',
                [pdas_2_focus, pdas_2_side, img_pdas2.T,

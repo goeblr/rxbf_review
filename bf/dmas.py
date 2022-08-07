@@ -9,8 +9,10 @@ def dmas_s_ij(aperture_data, i, j):
 
 def dmas_bandpass(sampling_frequency, pulse_frequency):
     bandpass = scipy.signal.firls(151,
-                              [0, pulse_frequency * 0.9, pulse_frequency * 1.2, sampling_frequency / 2],
-                              [0, 0, 1, 1], fs=sampling_frequency)
+                                  [0, pulse_frequency * 1.4,
+                                   pulse_frequency * 1.6, pulse_frequency * 2.8,
+                                   pulse_frequency * 3.2, sampling_frequency / 2],
+                                  [0, 0, 1, 1, 0, 0], fs=sampling_frequency)
     return bandpass
 
 
