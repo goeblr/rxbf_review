@@ -82,7 +82,10 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         xticks = [xticks] * num_plots
 
     fig, axs = plt.subplots(plot_rows, int(math.ceil(num_plots / plot_rows)), num=figure_title, figsize=(8, 12))
-    axs = axs.ravel()
+    if num_plots > 1:
+        axs = axs.ravel()
+    else:
+        axs = [axs]
     for data_idx in range(num_plots):
         data = datas[data_idx]
         ax = axs[data_idx]
@@ -154,7 +157,7 @@ def apply_bsmv_beamformer(data, sampling_frequency, pulse_frequency):
     return img_mv
 
 
-def create_plots(data_filename: str):
+def beamform(data_filename: str):
     f = h5.File(data_filename)
 
     data = f['data'][:, :, :]
@@ -165,37 +168,51 @@ def create_plots(data_filename: str):
     sampling_freq = 1 / sampling_distance
     wave_kernel_len = int(round(sampling_freq / pulse_freq))
 
-    bf_das = apply_beamformer(data, apod_matrix, bf.das.das)
-    bf_cf, weight_cf = apply_beamformer(data, apod_matrix, bf.coherence.cf)
-    bf_gcf, weight_gcf = apply_beamformer(data, apod_matrix, lambda x: bf.coherence.gcf(x, GCF_M))
-    bf_pcf, weight_pcf = apply_beamformer(data, apod_matrix, bf.coherence.pcf)
-    bf_scf, weight_scf = apply_beamformer(data, apod_matrix, bf.coherence.scf)
-    bf_imap, imap_sigma_y, imap_sigma_n = apply_beamformer(data, apod_matrix, lambda x: bf.imap.imap(x, IMAP_ITER))
-    bf_slsc = apply_beamformer(data, apod_matrix, lambda x: bf.slsc.slsc(x, SLSC_M, wave_kernel_len))
-    _, bf_fdmas = apply_beamformer(data, apod_matrix, lambda x: bf.dmas.dmas(x, sampling_freq, pulse_freq))
-    bf_pdas2 = apply_beamformer(data, apod_matrix, lambda x: bf.pdas.pdas(x, 2, sampling_freq, pulse_freq))
-    bf_pdas3 = apply_beamformer(data, apod_matrix, lambda x: bf.pdas.pdas(x, 3, sampling_freq, pulse_freq))
-    bf_mv = apply_beamformer(data, apod_matrix, lambda x: apply_mv_beamformer(x, sampling_freq, pulse_freq))
-    bf_bsmv = apply_beamformer(data, apod_matrix, lambda x: apply_bsmv_beamformer(x, sampling_freq, pulse_freq))
+    out = dict()
+    out['bf_das'] = apply_beamformer(data, apod_matrix, bf.das.das)
+    out['bf_cf'], out['weight_cf'] = apply_beamformer(data, apod_matrix, bf.coherence.cf)
+    out['bf_gcf'], out['weight_gcf'] = apply_beamformer(data, apod_matrix, lambda x: bf.coherence.gcf(x, GCF_M))
+    out['GCF_M'] = GCF_M
+    out['bf_pcf'], out['weight_pcf'] = apply_beamformer(data, apod_matrix, bf.coherence.pcf)
+    out['bf_scf'], out['weight_scf'] = apply_beamformer(data, apod_matrix, bf.coherence.scf)
+    out['bf_imap'], out['imap_sigma_y'], out['imap_sigma_n'] = apply_beamformer(data, apod_matrix,
+                                                                                lambda x: bf.imap.imap(x, IMAP_ITER))
+    out['IMAP_ITER'] = IMAP_ITER
+    out['bf_slsc'] = apply_beamformer(data, apod_matrix, lambda x: bf.slsc.slsc(x, SLSC_M, wave_kernel_len))
+    out['wave_kernel_len'] = wave_kernel_len
+    _, out['bf_fdmas'] = apply_beamformer(data, apod_matrix, lambda x: bf.dmas.dmas(x, sampling_freq, pulse_freq))
+    out['bf_pdas2'] = apply_beamformer(data, apod_matrix, lambda x: bf.pdas.pdas(x, 2, sampling_freq, pulse_freq))
+    out['bf_pdas3'] = apply_beamformer(data, apod_matrix, lambda x: bf.pdas.pdas(x, 3, sampling_freq, pulse_freq))
+    out['bf_mv'] = apply_beamformer(data, apod_matrix, lambda x: apply_mv_beamformer(x, sampling_freq, pulse_freq))
+    out['bf_bsmv'] = apply_beamformer(data, apod_matrix, lambda x: apply_bsmv_beamformer(x, sampling_freq, pulse_freq))
 
+    out['sampling_freq'] = sampling_freq
+    out['pulse_freq'] = pulse_freq
+    out['filename'] = data_filename
+    out['basename'] = os.path.basename(data_filename)
+
+    return out
+
+
+def create_plots(images: dict):
     pp = lambda x: comp.compression(env.envelope(x))
-    bmode_das = pp(bf_das)
-    bmode_cf = pp(bf_cf)
-    bmode_gcf = pp(bf_gcf)
-    bmode_pcf = pp(bf_pcf)
-    bmode_scf = pp(bf_scf)
-    bmode_imap = pp(bf_imap)
-    bmode_slsc = comp.compression(bf_slsc)
-    bmode_fdmas = pp(bf_fdmas)
-    bmode_pdas2 = pp(bf_pdas2)
-    bmode_pdas3 = pp(bf_pdas3)
-    bmode_mv = pp(bf_mv)
-    bmode_bsmv = pp(bf_bsmv)
+    bmode_das = pp(images['bf_das'])
+    bmode_cf = pp(images['bf_cf'])
+    bmode_gcf = pp(images['bf_gcf'])
+    bmode_pcf = pp(images['bf_pcf'])
+    bmode_scf = pp(images['bf_scf'])
+    bmode_imap = pp(images['bf_imap'])
+    bmode_slsc = comp.compression(images['bf_slsc'])
+    bmode_fdmas = pp(images['bf_fdmas'])
+    bmode_pdas2 = pp(images['bf_pdas2'])
+    bmode_pdas3 = pp(images['bf_pdas3'])
+    bmode_mv = pp(images['bf_mv'])
+    bmode_bsmv = pp(images['bf_bsmv'])
 
-    plot_multi(os.path.basename(data_filename),
-               [bmode_das, bmode_cf, weight_cf, bmode_gcf, weight_gcf,
-                bmode_pcf, weight_pcf, bmode_scf, weight_scf,
-                bmode_imap, pp(imap_sigma_y), pp(imap_sigma_n),
+    plot_multi(images['basename'],
+               [bmode_das, bmode_cf, images['weight_cf'], bmode_gcf, images['weight_gcf'],
+                bmode_pcf, images['weight_pcf'], bmode_scf, images['weight_scf'],
+                bmode_imap, pp(images['imap_sigma_y']), pp(images['imap_sigma_n']),
                 bmode_slsc, bmode_fdmas, bmode_pdas2, bmode_pdas3,
                 bmode_mv, bmode_bsmv],
                titles=[
@@ -211,9 +228,7 @@ def create_plots(data_filename: str):
                    'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
                    'individual_negative', 'individual_negative'],
                interpolation='nearest', plot_rows=5)
-    plt.suptitle(os.path.basename(data_filename))
-
-    plt.show()
+    plt.suptitle(os.path.basename(images['basename']))
 
 
 if __name__ == '__main__':
@@ -222,5 +237,11 @@ if __name__ == '__main__':
                  r'C:\work\Alpinion_L3-8_FI_hypoechoic_delayed.h5']
 
     for filename in filenames:
-        create_plots(filename)
+        beamformed = beamform(filename)
+        create_plots(beamformed)
+
+        with open(filename + '_beamformed.npz', 'wb') as numpy_file:
+            np.savez(numpy_file, **beamformed)
+
+    plt.show()
     pass
