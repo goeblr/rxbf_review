@@ -278,29 +278,21 @@ def create_plots(images: dict):
                                images['scan']['zs'][-1, -1], images['scan']['zs'][0, 0]]) * 1e3
     plot_multi(images['basename'],
                [bmode_das, bmode_cf, bmode_gcf,
-                bmode_pcf, bmode_scf,
-                bmode_imap,
-                bmode_slsc, bmode_fdmas, bmode_pdas2, bmode_pdas3,
-                bmode_mv, bmode_bsmv],
+                bmode_pcf, bmode_scf, bmode_imap,
+                bmode_slsc, bmode_fdmas, bmode_pdas2,
+                bmode_pdas3, bmode_mv, bmode_bsmv],
                titles=[
                    'DAS', 'CF+DAS', 'GCF+DAS',
-                   'PCF+DAS', 'SCF+DAS',
-                   'iMAP_2',
-                   'SLSC', 'F-DMAS', 'pDAS_2', 'pDAS_3',
-                   'MV', 'BS-MV'],
-               normalization=[
-                   'individual_negative', 'individual_negative', 'individual_negative',
-                   'individual_negative', 'individual_negative',
-                   'individual_negative',
-                   'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
-                   'individual_negative', 'individual_negative'],
+                   'PCF+DAS', 'SCF+DAS', r'$\textsf{iMAP}_2$',
+                   'SLSC', 'F-DMAS', r'$\textsf{p-DAS}_2$',
+                   r'$\textsf{p-DAS}_3$', 'MV', 'BS-MV'],
+               normalization='individual_negative',
                interpolation=None, plot_rows=4, image_extent=image_extent)
 
 
 if __name__ == '__main__':
-    # filenames = [r'C:\work\Alpinion_L3-8_FI_hyperechoic_scatterers_delayed_DEBUG.h5']
-    filenames = [r'C:\work\Alpinion_L3-8_FI_hyperechoic_scatterers_delayed.h5',
-                 r'C:\work\Alpinion_L3-8_FI_hypoechoic_delayed.h5']
+    filenames = ['data/Alpinion_L3-8_FI_hyperechoic_scatterers_delayed.h5',
+                 'data/Alpinion_L3-8_FI_hypoechoic_delayed.h5']
 
     for filename in filenames:
         beamformed_filename = filename + '_beamformed.npz'

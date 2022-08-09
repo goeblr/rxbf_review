@@ -298,8 +298,8 @@ def imap_plots(data):
     # fig = plot_multi(
     #     [imap1_focus[0], imap1_focus[1], imap1_focus[2],
     #      imap1_side[0], imap1_side[1], imap1_side[2], img_imap1.T],
-    #     titles=[r'$\textrm{iMAP}_1$ focus', r'$\sigma_y$ focus', r'$\sigma_n$ focus',
-    #             r'$\textrm{iMAP}_1$ side', r'$\sigma_y$ side', r'$\sigma_n$ side', r'$\textrm{iMAP}_1$ image'],
+    #     titles=[r'$\textsf{iMAP}_1$ focus', r'$\sigma_y$ focus', r'$\sigma_n$ focus',
+    #             r'$\textsf{iMAP}_1$ side', r'$\sigma_y$ side', r'$\sigma_n$ side', r'$\textsf{iMAP}_1$ image'],
     #     normalization=['individual', 'individual_positive', 'individual_positive',
     #                    'individual', 'individual_positive', 'individual_positive', 'individual'])
 
@@ -311,8 +311,8 @@ def imap_plots(data):
     plot_multi('IMAP2',
                [imap2_focus[0], imap2_focus[1], imap2_focus[2],
                 imap2_side[0], imap2_side[1], imap2_side[2], img_imap2.T],
-               titles=[r'$\textrm{iMAP}_2$ focus', r'$\sigma_y$ focus', r'$\sigma_n$ focus',
-                       r'$\textrm{iMAP}_2$ side', r'$\sigma_y$ side', r'$\sigma_n$ side', r'$\textrm{iMAP}_2$ image'],
+               titles=[r'$\textsf{iMAP}_2$ focus', r'$\sigma_y$ focus', r'$\sigma_n$ focus',
+                       r'$\textsf{iMAP}_2$ side', r'$\sigma_y$ side', r'$\sigma_n$ side', r'$\textsf{iMAP}_2$ image'],
                normalization=['individual', 'individual_positive', 'individual_positive',
                               'individual', 'individual_positive', 'individual_positive', 'individual'],
                xlabels=[None, None, None, None, None, None, 'Width [mm]'],
@@ -388,8 +388,8 @@ def pdas_plots(data):
     plot_multi('PDAS',
                [pdas_2_focus, pdas_2_side, img_pdas2.T,
                 pdas_3_focus, pdas_3_side, img_pdas3.T],
-               titles=[r'$\textrm{p-DAS}_2$ focus', r'$\textrm{p-DAS}_2$ side', r'$\textrm{p-DAS}_2$ image',
-                       r'$\textrm{p-DAS}_3$ focus', r'$\textrm{p-DAS}_3$ side', r'$\textrm{p-DAS}_3$ image'],
+               titles=[r'$\textsf{p-DAS}_2$ focus', r'$\textsf{p-DAS}_2$ side', r'$\textsf{p-DAS}_2$ image',
+                       r'$\textsf{p-DAS}_3$ focus', r'$\textsf{p-DAS}_3$ side', r'$\textsf{p-DAS}_3$ image'],
                xlabels=[None, None, 'Width [mm]',
                         None, None, 'Width [mm]'],
                xticks=[None, None, data['params']['image_ticks'],
