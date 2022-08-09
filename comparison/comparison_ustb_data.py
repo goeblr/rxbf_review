@@ -212,6 +212,15 @@ def default_postprocessing(x):
     return comp.compression(env.envelope(x))
 
 
+def save_figures(base_path: str):
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+
+    figs = list(map(plt.figure, plt.get_fignums()))
+    for fig in figs:
+        fig.savefig(os.path.join(base_path, f'{fig.get_label()}.pdf'))
+
+
 def create_plots_all(images: dict):
     pp = default_postprocessing
     bmode_das = pp(images['bf_das'])
@@ -285,7 +294,7 @@ def create_plots(images: dict):
                    'individual_negative',
                    'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
                    'individual_negative', 'individual_negative'],
-               interpolation='nearest', plot_rows=4, image_extent=image_extent)
+               interpolation=None, plot_rows=4, image_extent=image_extent)
 
 
 if __name__ == '__main__':
@@ -306,5 +315,6 @@ if __name__ == '__main__':
         create_plots(beamformed)
         # create_plots_all(beamformed)
 
+    save_figures('plots')
     plt.show()
     pass
