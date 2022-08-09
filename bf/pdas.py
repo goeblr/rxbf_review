@@ -3,6 +3,7 @@ import scipy.signal
 
 
 def pdas_bandpass(sampling_frequency, pulse_frequency):
+    # TODO(goeblr) maybe this filter should be shorter
     bandpass = scipy.signal.firls(151,
                                   [0, pulse_frequency * 0.7,
                                    pulse_frequency * 0.8, pulse_frequency * 1.4,

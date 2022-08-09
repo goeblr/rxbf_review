@@ -16,6 +16,8 @@ import bf.mv
 import postprocess.envelope as env
 import postprocess.compression as comp
 
+import measurements
+
 plt.rcParams['text.usetex'] = True
 plt.rcParams['font.size'] = 8
 plt.rcParams['figure.subplot.left'] = 0.04  # 0.125
@@ -74,7 +76,8 @@ def plot_2d(data, ax, normalization, interpolation, xticks, extent=None):
 
 
 def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[str], str] = 'individual',
-               interpolation=None, xlabels: List[str] = None, xticks=None, plot_rows=1, image_extent=None):
+               interpolation=None, xlabels: List[str] = None, xticks=None, plot_rows=1, image_extent=None,
+               rois=None):
     num_plots = len(datas)
 
     if not isinstance(normalization, list):
@@ -111,6 +114,13 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         ax.set_title(figure_title)
         if xlabels[data_idx] is not None:
             ax.set_xlabel(xlabels[data_idx])
+
+        if data_idx == 0 and rois is not None:
+            for _, region in rois.items():
+                for radius in region['radii']:
+                    if radius >= 0:
+                        circle = plt.Circle(region['center'], radius, color=region['color'], fill=False, linewidth=1.0)
+                        ax.add_artist(circle)
 
     # Set the ticks for all axes in the grid
     if image_extent is not None:
@@ -287,7 +297,7 @@ def create_plots(images: dict):
                    'SLSC', 'F-DMAS', r'$\textsf{p-DAS}_2$',
                    r'$\textsf{p-DAS}_3$', 'MV', 'BS-MV'],
                normalization='individual_negative',
-               interpolation=None, plot_rows=4, image_extent=image_extent)
+               interpolation=None, plot_rows=4, image_extent=image_extent, rois=images.get('rois'))
 
 
 if __name__ == '__main__':
@@ -304,7 +314,15 @@ if __name__ == '__main__':
             beamformed = beamform(filename)
             np.savez(beamformed_filename, **beamformed)
 
+        if 'Alpinion_L3-8_FI_hypoechoic' in filename:
+            beamformed['rois'] = {'target': {'center': [-9.5, 40.8], 'radii': [0, 2.8], 'color': '#17becf'},
+                                          'background': {'center': [-9.5, 40.8], 'radii': [4.5, 7.2], 'color': '#ff7f0e'}}
+
+        if 'rois' in beamformed.keys():
+            measurements.measure(beamformed, ['CR', 'CNR', 'SNRs'])
+
         create_plots(beamformed)
+
         # create_plots_all(beamformed)
 
     save_figures('plots')
