@@ -24,7 +24,7 @@ SLSC_M = 12  # equivalent to Q = 20% for aperture size of 64
 
 
 # xticks: None, 'FirstLastIndex',  <List of indices list and labels list>, Int for every x-th tick centered around 1
-def plot_2d(data, ax, normalization, interpolation, xticks):
+def plot_2d(data, ax, normalization, interpolation, xticks, extent=None):
     cmap = 'gray'
     # cmap = 'cmr.wildfire'
     # cmap = 'cmr.iceburn'
@@ -46,7 +46,7 @@ def plot_2d(data, ax, normalization, interpolation, xticks):
         v_max = 1
     else:
         raise RuntimeError('Not implemented')
-    ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, aspect='auto', interpolation=interpolation)
+    ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, interpolation=interpolation, extent=extent)
     # for speed
     # ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, interpolation='nearest', aspect='auto')
 
@@ -69,7 +69,7 @@ def plot_2d(data, ax, normalization, interpolation, xticks):
 
 
 def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[str], str] = 'individual',
-               interpolation=None, xlabels: List[str] = None, xticks=None, plot_rows=1):
+               interpolation=None, xlabels: List[str] = None, xticks=None, plot_rows=1, image_extent=None):
     num_plots = len(datas)
 
     if not isinstance(normalization, list):
@@ -97,7 +97,7 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         # plot_1d(data, ax, normalization[data_idx])
         # elif data.ndim == 2:
         if data.ndim == 2:
-            plot_2d(data, ax, normalization[data_idx], interpolation[data_idx], xticks[data_idx])
+            plot_2d(data, ax, normalization[data_idx], interpolation[data_idx], xticks[data_idx], extent=image_extent)
 
         figure_title = f'({chr(97 + data_idx)})'
         try:
@@ -191,11 +191,17 @@ def beamform(data_filename: str):
     out['filename'] = data_filename
     out['basename'] = os.path.basename(data_filename)
 
+    out['scan'] = {'xs': f['scan']['xs'][:, :], 'zs': f['scan']['zs'][:, :]}
+
     return out
 
 
-def create_plots(images: dict):
-    pp = lambda x: comp.compression(env.envelope(x))
+def default_postprocessing(x):
+    return comp.compression(env.envelope(x))
+
+
+def create_plots_all(images: dict):
+    pp = default_postprocessing
     bmode_das = pp(images['bf_das'])
     bmode_cf = pp(images['bf_cf'])
     bmode_gcf = pp(images['bf_gcf'])
@@ -209,7 +215,9 @@ def create_plots(images: dict):
     bmode_mv = pp(images['bf_mv'])
     bmode_bsmv = pp(images['bf_bsmv'])
 
-    plot_multi(images['basename'],
+    image_extent = np.asarray([images['scan']['xs'][0, 0], images['scan']['xs'][-1, -1],
+                               images['scan']['zs'][-1, -1], images['scan']['zs'][0, 0]]) * 1e3
+    plot_multi(images['basename'] + " all",
                [bmode_das, bmode_cf, images['weight_cf'], bmode_gcf, images['weight_gcf'],
                 bmode_pcf, images['weight_pcf'], bmode_scf, images['weight_scf'],
                 bmode_imap, pp(images['imap_sigma_y']), pp(images['imap_sigma_n']),
@@ -227,8 +235,47 @@ def create_plots(images: dict):
                    'individual_negative', 'individual_negative', 'individual_negative',
                    'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
                    'individual_negative', 'individual_negative'],
-               interpolation='nearest', plot_rows=5)
-    plt.suptitle(os.path.basename(images['basename']))
+               interpolation='nearest', plot_rows=5, image_extent=image_extent)
+    plt.suptitle(images['basename'] + " all")
+
+
+def create_plots(images: dict):
+    pp = default_postprocessing
+    bmode_das = pp(images['bf_das'])
+    bmode_cf = pp(images['bf_cf'])
+    bmode_gcf = pp(images['bf_gcf'])
+    bmode_pcf = pp(images['bf_pcf'])
+    bmode_scf = pp(images['bf_scf'])
+    bmode_imap = pp(images['bf_imap'])
+    bmode_slsc = comp.compression(images['bf_slsc'])
+    bmode_fdmas = pp(images['bf_fdmas'])
+    bmode_pdas2 = pp(images['bf_pdas2'])
+    bmode_pdas3 = pp(images['bf_pdas3'])
+    bmode_mv = pp(images['bf_mv'])
+    bmode_bsmv = pp(images['bf_bsmv'])
+
+    image_extent = np.asarray([images['scan']['xs'][0, 0], images['scan']['xs'][-1, -1],
+                               images['scan']['zs'][-1, -1], images['scan']['zs'][0, 0]]) * 1e3
+    plot_multi(images['basename'],
+               [bmode_das, bmode_cf, bmode_gcf,
+                bmode_pcf, bmode_scf,
+                bmode_imap,
+                bmode_slsc, bmode_fdmas, bmode_pdas2, bmode_pdas3,
+                bmode_mv, bmode_bsmv],
+               titles=[
+                   'DAS', 'CF+DAS', 'GCF+DAS',
+                   'PCF+DAS', 'SCF+DAS',
+                   'iMAP_2',
+                   'SLSC', 'F-DMAS', 'pDAS_2', 'pDAS_3',
+                   'MV', 'BS-MV'],
+               normalization=[
+                   'individual_negative', 'individual_negative', 'individual_negative',
+                   'individual_negative', 'individual_negative',
+                   'individual_negative',
+                   'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
+                   'individual_negative', 'individual_negative'],
+               interpolation='nearest', plot_rows=4, image_extent=image_extent)
+    plt.suptitle(images['basename'])
 
 
 if __name__ == '__main__':
@@ -237,11 +284,17 @@ if __name__ == '__main__':
                  r'C:\work\Alpinion_L3-8_FI_hypoechoic_delayed.h5']
 
     for filename in filenames:
-        beamformed = beamform(filename)
-        create_plots(beamformed)
+        beamformed_filename = filename + '_beamformed.npz'
 
-        with open(filename + '_beamformed.npz', 'wb') as numpy_file:
-            np.savez(numpy_file, **beamformed)
+        if os.path.exists(beamformed_filename):
+            with np.load(beamformed_filename, allow_pickle=True) as np_load:
+                beamformed = {k: v.item() if v.ndim == 0 else v for (k, v) in np_load.items()}
+        else:
+            beamformed = beamform(filename)
+            np.savez(beamformed_filename, **beamformed)
+
+        create_plots(beamformed)
+        # create_plots_all(beamformed)
 
     plt.show()
     pass
