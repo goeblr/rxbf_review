@@ -3,7 +3,9 @@ from typing import Union, List
 import math
 import os.path
 import matplotlib.pyplot as plt
+from mpl_toolkits.axes_grid1 import ImageGrid
 import numpy as np
+
 import bf.das
 import bf.coherence
 import bf.imap
@@ -14,9 +16,12 @@ import bf.mv
 import postprocess.envelope as env
 import postprocess.compression as comp
 
-plt.rcParams['figure.subplot.left'] = 0.025  # 0.125
-plt.rcParams['figure.subplot.right'] = 0.975  # 0.9
+plt.rcParams['text.usetex'] = True
+plt.rcParams['font.size'] = 8
+plt.rcParams['figure.subplot.left'] = 0.04  # 0.125
+plt.rcParams['figure.subplot.right'] = 0.985  # 0.9
 plt.rcParams['figure.subplot.bottom'] = 0.025  # 0.11
+plt.rcParams['figure.subplot.top'] = 0.975
 
 GCF_M = 1
 IMAP_ITER = 2
@@ -81,21 +86,20 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
     if not isinstance(xticks, list):
         xticks = [xticks] * num_plots
 
-    fig, axs = plt.subplots(plot_rows, int(math.ceil(num_plots / plot_rows)), num=figure_title, figsize=(8, 12))
-    if num_plots > 1:
-        axs = axs.ravel()
-    else:
-        axs = [axs]
+    fig = plt.figure(num=figure_title, figsize=(7.5, 9.5))
+    grid = ImageGrid(fig, 111,  # similar to subplot(141)
+                     nrows_ncols=(plot_rows, int(math.ceil(num_plots / plot_rows))),
+                     axes_pad=(0.1, 0.4),
+                     label_mode="L",
+                     share_all=True,
+                     ngrids=num_plots
+                     )
+    axs = [ax for ax in grid]
+
     for data_idx in range(num_plots):
         data = datas[data_idx]
         ax = axs[data_idx]
-        # if isinstance(data, tuple) or isinstance(data, list):
-        # assert (all([d.ndim == 1 for d in data]))
-        # for d in data:
-        # plot_1d(d, ax, normalization[data_idx])
-        # elif data.ndim == 1:
-        # plot_1d(data, ax, normalization[data_idx])
-        # elif data.ndim == 2:
+
         if data.ndim == 2:
             plot_2d(data, ax, normalization[data_idx], interpolation[data_idx], xticks[data_idx], extent=image_extent)
 
@@ -107,6 +111,14 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         ax.set_title(figure_title)
         if xlabels[data_idx] is not None:
             ax.set_xlabel(xlabels[data_idx])
+
+    # Set the ticks for all axes in the grid
+    if image_extent is not None:
+        tick_spacing = 5.0
+        grid.axes_llc.set_xticks(np.arange(math.ceil(image_extent[0] / tick_spacing) * tick_spacing,
+                                           image_extent[1] + 1e-6, tick_spacing))
+        grid.axes_llc.set_yticks(np.arange(math.ceil(image_extent[3] / tick_spacing) * tick_spacing,
+                                           image_extent[2] + 1e-6, tick_spacing))
     return fig
 
 
@@ -236,7 +248,6 @@ def create_plots_all(images: dict):
                    'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
                    'individual_negative', 'individual_negative'],
                interpolation='nearest', plot_rows=5, image_extent=image_extent)
-    plt.suptitle(images['basename'] + " all")
 
 
 def create_plots(images: dict):
@@ -275,7 +286,6 @@ def create_plots(images: dict):
                    'individual_negative', 'individual_negative', 'individual_negative', 'individual_negative',
                    'individual_negative', 'individual_negative'],
                interpolation='nearest', plot_rows=4, image_extent=image_extent)
-    plt.suptitle(images['basename'])
 
 
 if __name__ == '__main__':
