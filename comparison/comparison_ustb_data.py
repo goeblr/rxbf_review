@@ -5,6 +5,7 @@ import os.path
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 import numpy as np
+import pandas as pd
 
 import bf.das
 import bf.coherence
@@ -118,7 +119,7 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
         if data_idx == 0 and rois is not None:
             for _, region in rois.items():
                 for radius in region['radii']:
-                    if radius >= 0:
+                    if radius > 0:
                         circle = plt.Circle(region['center'], radius, color=region['color'], fill=False, linewidth=1.0)
                         ax.add_artist(circle)
 
@@ -300,6 +301,20 @@ def create_plots(images: dict):
                interpolation=None, plot_rows=4, image_extent=image_extent, rois=images.get('rois'))
 
 
+def create_measurements(images: dict, base_path: str):
+    # Select the interesting images:
+    EXPORT_KEYS = ['bf_das', 'bf_cf', 'bf_gcf', 'bf_pcf', 'bf_scf', 'bf_imap', 'bf_slsc', 'bf_fdmas', 'bf_pdas2',
+                   'bf_pdas3', 'bf_mv', 'bf_bsmv']
+
+    results = measurements.measure(images, ['CR', 'CNR', 'SNRs'])
+    results = pd.DataFrame(results)
+    results = results[EXPORT_KEYS]
+    results = results.transpose()
+    target_filename = f'{base_path}/{images["basename"]}.tex'
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+    results.to_latex(target_filename, float_format="%.2f")
+
 if __name__ == '__main__':
     filenames = ['data/Alpinion_L3-8_FI_hyperechoic_scatterers_delayed.h5',
                  'data/Alpinion_L3-8_FI_hypoechoic_delayed.h5']
@@ -316,10 +331,10 @@ if __name__ == '__main__':
 
         if 'Alpinion_L3-8_FI_hypoechoic' in filename:
             beamformed['rois'] = {'target': {'center': [-9.5, 40.8], 'radii': [0, 2.8], 'color': '#17becf'},
-                                          'background': {'center': [-9.5, 40.8], 'radii': [4.5, 7.2], 'color': '#ff7f0e'}}
+                                  'background': {'center': [-9.5, 40.8], 'radii': [4.5, 7.2], 'color': '#ff7f0e'}}
 
         if 'rois' in beamformed.keys():
-            measurements.measure(beamformed, ['CR', 'CNR', 'SNRs'])
+            create_measurements(beamformed, 'measurements')
 
         create_plots(beamformed)
 

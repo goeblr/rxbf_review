@@ -1,20 +1,29 @@
 from typing import List
 import numpy as np
+import math
+import postprocess.envelope as env
 
 
 def compute_cr(values):
-    # TODO(goeblr) do it
-    return 0
+    mu_background = np.average(values['background'])
+    mu_target = np.average(values['target'])
+
+    return 20 * math.log10(mu_background / mu_target)
 
 
 def compute_cnr(values):
-    # TODO(goeblr) do it
-    return 0
+    mu_background = np.average(values['background'])
+    mu_target = np.average(values['target'])
+    sigma_background = np.std(values['background'])
+    sigma_target = np.std(values['target'])
+
+    return 20 * math.log10(abs(mu_background - mu_target) / math.sqrt(sigma_background**2 + sigma_target**2))
 
 
 def compute_snrs(values):
-    # TODO(goeblr) do it
-    return 0
+    mu_background = np.average(values['background'])
+    sigma_background = np.std(values['background'])
+    return mu_background / sigma_background
 
 
 def extract_values(image: np.ndarray, scan_geometry: dict, geometries: dict):
@@ -43,12 +52,14 @@ def measure(images: dict, measurements: List[str]):
     values = dict()
     for entry, image in images.items():
         if isinstance(image, np.ndarray) and image.ndim == 2:
-            image_values = extract_values(image, images['scan'], images['rois'])
+            image_envelope = env.envelope(image)
+            image_values = extract_values(image_envelope, images['scan'], images['rois'])
 
+            values[entry] = dict()
             if 'CR' in measurements:
                 values[entry]['CR'] = compute_cr(image_values)
             if 'CNR' in measurements:
-                values[entry]['CNR'] = compute_cr(image_values)
+                values[entry]['CNR'] = compute_cnr(image_values)
             if 'SNRs' in measurements:
-                values[entry]['SNRs'] = compute_cr(image_values)
+                values[entry]['SNRs'] = compute_snrs(image_values)
     return values

@@ -3,3 +3,4 @@ matplotlib
 scipy
 cmasher
 h5py
+pandas
