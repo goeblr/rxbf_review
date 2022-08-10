@@ -1,6 +1,7 @@
 from typing import List
 import numpy as np
 import math
+import skimage
 import postprocess.envelope as env
 
 
@@ -26,6 +27,28 @@ def compute_snrs(values):
     return mu_background / sigma_background
 
 
+def compute_fwhm(patch, scan_geometry: dict):
+    UPSCALING_FACTOR = 10
+
+    patch = skimage.transform.rescale(patch, UPSCALING_FACTOR, order=3)
+
+    line_maximums = np.max(patch, axis=1)
+    line = patch[np.argmax(line_maximums), :]
+
+    peak_pos = np.argmax(line)
+    line /= np.max(line)
+
+    line_left = line[peak_pos:-1:]
+    line_right = line[peak_pos + 1:]
+
+    half_max_left = peak_pos - (np.nonzero(line_left <= 0.5)[0][0] + 1)
+    half_max_right = peak_pos + (np.nonzero(line_right <= 0.5)[0][0] + 1)
+
+    fwhm_samples = half_max_right - half_max_left
+
+    return scan_geometry['xs'][0, 0] * scan_geometry['xs'][0, 1] * 1e3 * fwhm_samples / UPSCALING_FACTOR
+
+
 def extract_values(image: np.ndarray, scan_geometry: dict, geometries: dict):
     values = dict()
     xs = scan_geometry['xs'] * 1e3
@@ -45,12 +68,25 @@ def extract_values(image: np.ndarray, scan_geometry: dict, geometries: dict):
                 mask = np.logical_and(mask, (xs - center[0]) ** 2 + (zs - center[1]) ** 2 > radius_inner ** 2)
 
             values[geometry] = image[mask]
+        elif 'point' in parameters.keys() and 'box' in parameters.keys():
+            box = parameters['box']
+            point = parameters['point']
+            assert (all([x > 0 for x in box]))
+            assert (all(np.equal(xs[0], xs[-1])))
+            assert (all(np.equal(zs[:, 0], zs[:, -1])))
+
+            # Extract a rect around the point
+            x_indices = np.nonzero(np.abs(xs[0] - point[0]) <= box[0] / 2)[0]
+            z_indices = np.nonzero(np.abs(zs[:, 0] - point[1]) <= box[1] / 2)[0]
+
+            values[geometry] = image[z_indices[0]:(z_indices[-1] + 1), x_indices[0]:(x_indices[-1] + 1)]
     return values
 
 
-def measure(images: dict, measurements: List[str]):
+def measure(images: dict, data_keys: List[str], measurements: List[str]):
     values = dict()
-    for entry, image in images.items():
+    for entry in data_keys:
+        image = images[entry]
         if isinstance(image, np.ndarray) and image.ndim == 2:
             if not entry == 'bf_slsc':
                 image = env.envelope(image)
@@ -63,4 +99,9 @@ def measure(images: dict, measurements: List[str]):
                 values[entry]['CNR'] = compute_cnr(image_values)
             if 'SNRs' in measurements:
                 values[entry]['SNRs'] = compute_snrs(image_values)
+            if 'FWHM' in measurements:
+                for point_name, point_values in image_values.items():
+                    if point_name.startswith('point_'):
+                        values[entry][point_name.replace('point_', 'FWHM_')] = compute_fwhm(point_values,
+                                                                                            images['scan'])
     return values

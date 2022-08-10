@@ -5,3 +5,4 @@ cmasher
 h5py
 pandas
 jinja2
+scikit-image

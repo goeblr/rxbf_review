@@ -118,10 +118,12 @@ def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[
 
         if data_idx == 0 and rois is not None:
             for _, region in rois.items():
-                for radius in region['radii']:
-                    if radius > 0:
-                        circle = plt.Circle(region['center'], radius, color=region['color'], fill=False, linewidth=1.0)
-                        ax.add_artist(circle)
+                if 'center' in region.keys() and 'radii' in region.keys():
+                    for radius in region['radii']:
+                        if radius > 0:
+                            circle = plt.Circle(region['center'], radius, color=region['color'], fill=False,
+                                                linewidth=1.0)
+                            ax.add_artist(circle)
 
     # Set the ticks for all axes in the grid
     if image_extent is not None:
@@ -312,9 +314,8 @@ def create_measurements(images: dict, base_path: str):
                            'SLSC', 'F-DMAS', r'$\text{p-DAS}_2$',
                            r'$\text{p-DAS}_3$', 'MV', 'BS-MV']
 
-    results = measurements.measure(images, ['CR', 'CNR', 'SNRs'])
+    results = measurements.measure(images, EXPORT_KEYS, ['CR', 'CNR', 'SNRs', 'FWHM'])
     results = pd.DataFrame(results)
-    results = results[EXPORT_KEYS]
     results = results.transpose()
     results = results.rename({k: v for k, v, in zip(EXPORT_KEYS, EXPORT_KEYS_DISPLAY)})
     target_filename = f'{base_path}/{images["basename"]}.tex'
@@ -340,6 +341,12 @@ if __name__ == '__main__':
         if 'Alpinion_L3-8_FI_hypoechoic' in filename:
             beamformed['rois'] = {'target': {'center': [-9.5, 40.8], 'radii': [0, 2.8], 'color': '#17becf'},
                                   'background': {'center': [-9.5, 40.8], 'radii': [4.5, 7.2], 'color': '#ff7f0e'}}
+        elif 'Alpinion_L3-8_FI_hyperechoic_scatterers' in filename:
+            beamformed['rois'] = {'target': {'center': [-15.0, 39.3], 'radii': [0, 2.8], 'color': '#17becf'},
+                                  'background': {'center': [7.0, 39.3], 'radii': [0, 2.8], 'color': '#ff7f0e'},
+                                  'point_1': {'point': [-4.196, 20.15], 'box': [4.16, 3]},
+                                  'point_2': {'point': [-4.475, 39.563], 'box': [4.16, 3]}
+                                  }
 
         if 'rois' in beamformed.keys():
             create_measurements(beamformed, 'measurements')
