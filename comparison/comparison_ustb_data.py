@@ -303,17 +303,25 @@ def create_plots(images: dict):
 
 def create_measurements(images: dict, base_path: str):
     # Select the interesting images:
-    EXPORT_KEYS = ['bf_das', 'bf_cf', 'bf_gcf', 'bf_pcf', 'bf_scf', 'bf_imap', 'bf_slsc', 'bf_fdmas', 'bf_pdas2',
+    EXPORT_KEYS = ['bf_das', 'bf_cf', 'bf_gcf',
+                   'bf_pcf', 'bf_scf', 'bf_imap',
+                   'bf_slsc', 'bf_fdmas', 'bf_pdas2',
                    'bf_pdas3', 'bf_mv', 'bf_bsmv']
+    EXPORT_KEYS_DISPLAY = ['DAS', 'CF+DAS', 'GCF+DAS',
+                           'PCF+DAS', 'SCF+DAS', r'$\text{iMAP}_2$',
+                           'SLSC', 'F-DMAS', r'$\text{p-DAS}_2$',
+                           r'$\text{p-DAS}_3$', 'MV', 'BS-MV']
 
     results = measurements.measure(images, ['CR', 'CNR', 'SNRs'])
     results = pd.DataFrame(results)
     results = results[EXPORT_KEYS]
     results = results.transpose()
+    results = results.rename({k: v for k, v, in zip(EXPORT_KEYS, EXPORT_KEYS_DISPLAY)})
     target_filename = f'{base_path}/{images["basename"]}.tex'
     if not os.path.exists(base_path):
         os.mkdir(base_path)
-    results.to_latex(target_filename, float_format="%.2f")
+    results.style.format(precision=2).to_latex(target_filename)
+
 
 if __name__ == '__main__':
     filenames = ['data/Alpinion_L3-8_FI_hyperechoic_scatterers_delayed.h5',

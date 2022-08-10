@@ -4,3 +4,4 @@ scipy
 cmasher
 h5py
 pandas
+jinja2
