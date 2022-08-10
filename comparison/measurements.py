@@ -17,7 +17,7 @@ def compute_cnr(values):
     sigma_background = np.std(values['background'])
     sigma_target = np.std(values['target'])
 
-    return 20 * math.log10(abs(mu_background - mu_target) / math.sqrt(sigma_background**2 + sigma_target**2))
+    return 20 * math.log10(abs(mu_background - mu_target) / math.sqrt(sigma_background ** 2 + sigma_target ** 2))
 
 
 def compute_snrs(values):
@@ -40,9 +40,9 @@ def extract_values(image: np.ndarray, scan_geometry: dict, geometries: dict):
             assert (radius_outer > radius_inner)
 
             # find points inside the rim
-            mask = (xs - center[0]) ** 2 + (zs - center[1]) ** 2 <= radius_outer
+            mask = (xs - center[0]) ** 2 + (zs - center[1]) ** 2 <= radius_outer ** 2
             if radius_inner > 0:
-                mask = np.logical_and(mask, (xs - center[0]) ** 2 + (zs - center[1]) ** 2 > radius_inner)
+                mask = np.logical_and(mask, (xs - center[0]) ** 2 + (zs - center[1]) ** 2 > radius_inner ** 2)
 
             values[geometry] = image[mask]
     return values
@@ -52,8 +52,9 @@ def measure(images: dict, measurements: List[str]):
     values = dict()
     for entry, image in images.items():
         if isinstance(image, np.ndarray) and image.ndim == 2:
-            image_envelope = env.envelope(image)
-            image_values = extract_values(image_envelope, images['scan'], images['rois'])
+            if not entry == 'bf_slsc':
+                image = env.envelope(image)
+            image_values = extract_values(image, images['scan'], images['rois'])
 
             values[entry] = dict()
             if 'CR' in measurements:

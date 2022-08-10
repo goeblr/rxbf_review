@@ -21,7 +21,7 @@ def slsc(aperture_data, big_m, temp_kernel_length):
     result = 0.0 * aperture_data[0, :]
     for m in range(1, big_m + 1):
         result += slsc_spatial_correlation(aperture_data, m, temp_kernel_length)
-    return result
+    return np.maximum(result, 0.0)
 
 
 def slsc_spatial_correlation_image(aperture_data, temp_kernel_length):
