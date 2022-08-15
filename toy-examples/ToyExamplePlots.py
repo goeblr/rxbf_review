@@ -414,7 +414,7 @@ def mv_plots(data):
     plot_multi('MV',
                [mv_focus, weights_focus, mv_side, weights_side, img_mv.T],
                titles=['MV focus', '$w(t)$ focus', 'MV side', '$w(t)$ side', 'MV image'],
-               xlabels=[None, 'Sub-aperture', None, 'Sub-aperture', 'Width [mm]'],
+               xlabels=[None, 'Subaperture', None, 'Subaperture', 'Width [mm]'],
                xticks=[None, 'FirstLastIdx', None, 'FirstLastIdx', data['params']['image_ticks']])
 
 
@@ -443,8 +443,8 @@ def bsmv_plots(data):
                        'BSMV side', 'BS signal', '$w(t)$ side', 'BSMV image'],
                interpolation=[None, 'nearest', 'nearest',
                               None, 'nearest', 'nearest', None],
-               xlabels=[None, 'Sub-aperture', 'Sub-aperture',
-                        None, 'Sub-aperture', 'Sub-aperture', 'Width [mm]'],
+               xlabels=[None, 'Subaperture', 'Subaperture',
+                        None, 'Subaperture', 'Subaperture', 'Width [mm]'],
                xticks=[None, 1, 1,
                        None, 1, 1, data['params']['image_ticks']])
 
