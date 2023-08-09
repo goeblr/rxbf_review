@@ -1,7 +1,4 @@
-import cmasher as cmr
-import numpy as np
 import matplotlib.pyplot as plt
-import scipy.signal
 import math
 import bf.das
 import bf.coherence
@@ -10,7 +7,6 @@ import bf.dmas
 import bf.imap
 import bf.pdas
 import bf.mv
-from typing import Union, List
 import os
 
 plt.rcParams['text.usetex'] = True
@@ -22,203 +18,10 @@ plt.rcParams['axes.formatter.limits'] = [-4, 4]  # (default: [-5, 6]).
 plt.rcParams["axes.formatter.useoffset"] = False
 plt.rcParams["axes.formatter.use_mathtext"] = True
 
+from plotting import *
+from ToyData import *
+
 GCF_M = 1
-
-
-def create_data():
-    num_elements = 40
-    num_samples = 101
-    num_samples = 171
-
-    element_spacing = 0.1  # mm
-    point_depth = 40  # mm
-    speed_of_sound = 1540e3  # mm/s
-    sampling_frequency = 200e6  # Hz
-
-    num_lines = 128
-    line_spacing = 0.05  # mm
-
-    pulse_frequency = 7e6
-    pulse_bandwidth = 0.40
-    pulse_side_line_idx = 20
-    # determined through:
-    # pulse_side_ext = np.concatenate((np.zeros(pulse_side.shape), pulse_side, np.zeros(pulse_side.shape)), 1)
-    # plt.plot([np.max(scipy.signal.convolve(pulse_side_ext, line_aperture_data[:, :, i], 'same').flatten()) for i in
-    #           range(line_aperture_data.shape[-1])])
-    # and selecting the index with the largest correlation value
-
-    pulse_side_phase_total = 2 * math.pi
-
-    def pulse(t_center):
-        t = np.linspace(-num_samples / 2 / sampling_frequency - t_center,
-                        num_samples / 2 / sampling_frequency - t_center, num_samples)
-        return scipy.signal.gausspulse(t, fc=pulse_frequency, bw=pulse_bandwidth) * 1024
-
-    pulse_focus = np.tile(pulse(0), [num_elements, 1])
-
-    phases = np.linspace(-pulse_side_phase_total / 2, pulse_side_phase_total / 2, num_elements)
-    t_centers = phases / (2.0 * math.pi * pulse_frequency)
-    pulse_side = np.stack([pulse(t_center) for t_center in t_centers])
-
-    element_positions = np.linspace(-num_elements / 2 * element_spacing,
-                                    num_elements / 2 * element_spacing,
-                                    num_elements)
-    t_centers = np.sqrt(element_positions ** 2 + point_depth ** 2) / speed_of_sound
-    t_base = min(t_centers)
-    pulse_channel_data = np.stack([pulse(t_center - t_base) for t_center in t_centers])
-
-    line_aperture_data = np.zeros(pulse_channel_data.shape + (num_lines,))
-    line_offsets = np.zeros((num_lines,))
-    for line_idx in range(num_lines):
-        line_offset = -(-num_lines / 2 + line_idx) * line_spacing
-        line_offsets[line_idx] = line_offset
-        t_centers = np.sqrt(element_positions ** 2 + point_depth ** 2) / speed_of_sound
-        t_delays = np.sqrt((element_positions - line_offset) ** 2 + point_depth ** 2) / speed_of_sound
-        line_aperture_data[:, :, line_idx] = np.stack(
-            [pulse(t_center - t_delay) for t_center, t_delay in zip(t_centers, t_delays)])
-
-    # pulse_side = line_aperture_data[:, :, pulse_side_line_idx]
-    pulse_side_distance = line_offsets[pulse_side_line_idx]
-
-    image_tick_labels = line_offsets[127:0:-21]
-    image_tick_labels = [f'${x:.1f}$' if idx % 2 == 0 else None for idx, x in enumerate(image_tick_labels)]
-    image_ticks = [list(range(0, 127, 21)), image_tick_labels]
-
-    # pulse_clutter = 0.5 * pulse_focus + 0.5 * pulse_side
-    params = {'pulse_frequency': pulse_frequency, 'sampling_frequency': sampling_frequency,
-              'line_offsets': line_offsets, 'pulse_side_distance': pulse_side_distance, 'image_ticks': image_ticks}
-
-    return {'pulse_focus': pulse_focus, 'pulse_side': pulse_side, 'pulse_channel_data': pulse_channel_data,
-            'line_aperture_data': line_aperture_data, 'params': params}
-
-
-# xticks: None, 'FirstLastIndex',  <List of indices list and labels list>, Int for every x-th tick centered around 1
-def plot_2d(data, ax, normalization, interpolation, xticks):
-    cmap = 'gray'
-    # cmap = 'cmr.wildfire'
-    # cmap = 'cmr.iceburn'
-    if data.ndim == 1:
-        data = np.reshape(data, data.shape + (1,))
-    elif data.ndim == 2:
-        data = data.T
-
-    if normalization == 'fixed':
-        v_min = -1024
-        v_max = 1024
-    elif normalization == 'individual':
-        v_min_max = np.max(np.abs(data.ravel()))
-        v_min = -v_min_max
-        v_max = v_min_max
-    elif normalization == 'individual_positive':
-        v_min = 0
-        v_max = np.max(data.ravel())
-    elif normalization == '01':
-        v_min = 0
-        v_max = 1
-    else:
-        raise RuntimeError('Not implemented')
-    ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, aspect='auto', interpolation=interpolation)
-    # for speed
-    # ax.imshow(data, cmap=cmap, vmin=v_min, vmax=v_max, interpolation='nearest', aspect='auto')
-
-    w = data.shape[1]
-    # h = data.shape[0]
-
-    ax.set_yticks([])
-
-    if xticks is None:
-        ax.set_xticks([])
-    elif xticks == 'FirstLastIdx':
-        ax.set_xticks([0, w - 1])
-        ax.set_xticklabels([1, w])
-    elif isinstance(xticks, int):
-        ax.set_xticks(np.arange(0, w, xticks))
-        ax.set_xticklabels(np.arange(1, w + 1, xticks))
-    elif isinstance(xticks, list) or isinstance(xticks, tuple):
-        ax.set_xticks(xticks[0])
-        ax.set_xticklabels(xticks[1])
-
-    # Major ticks
-    # ax.set_xticks(np.arange(0, w, 1))
-    # ax.set_yticks(np.arange(0, h, 1))
-    # ax.set_yticks(np.arange(0, h, 5))
-
-    # Labels for major ticks
-    # ax.set_xticklabels(np.arange(1, 11, 1))
-    # ax.set_yticklabels(np.arange(1, 11, 1))
-
-    # Minor ticks
-    # ax.set_xticks(np.arange(-.5, w, 1), minor=True)
-    # ax.set_yticks(np.arange(-.5, h, 1), minor=True)
-
-    # Gridlines based on minor ticks
-    # ax.grid(which='minor', color='k', linestyle='-', linewidth=1)
-
-
-def plot_1d(data, ax, normalization):
-    ax.plot(data, range(len(data)))
-    if normalization == '01':
-        v_min = 0
-        v_max = 1
-    elif normalization == 'fixed':
-        v_min = -1024
-        v_max = 1024
-    elif normalization == 'individual':
-        v_min_max = np.max(np.abs(data.ravel()))
-        v_min = -v_min_max
-        v_max = v_min_max
-    elif normalization == 'individual_positive':
-        v_min = 0
-        v_max = np.max(data.ravel())
-    else:
-        raise RuntimeError('Not implemented')
-    limit_distance = v_max - v_min
-    margin = 0.1
-    ax.set_xlim(v_min - limit_distance * margin, v_max + limit_distance * margin)
-    ax.set_yticks([])
-    # ax.xaxis.set_tick_params(rotation=45)
-
-
-def plot_multi(figure_title: str, datas, titles=None, normalization: Union[List[str], str] = 'individual',
-               interpolation=None, xlabels: List[str] = None, xticks=None):
-    num_plots = len(datas)
-
-    if not isinstance(normalization, list):
-        normalization = [normalization] * num_plots
-    if not isinstance(interpolation, list):
-        interpolation = [interpolation] * num_plots
-    if not isinstance(xlabels, list):
-        xlabels = [xlabels] * num_plots
-    if not isinstance(xticks, list):
-        xticks = [xticks] * num_plots
-
-    # width_ratios = [1 if data.ndim == 2 else 0.1 for data in datas]
-    width_ratios = [1 if isinstance(data, np.ndarray) and data.ndim == 2 else 1 for data in datas]
-    fig, axs = plt.subplots(1, num_plots, num=figure_title, figsize=(8, 1.9),
-                            gridspec_kw={'width_ratios': width_ratios})
-    for data_idx in range(num_plots):
-        data = datas[data_idx]
-        ax = axs[data_idx]
-        if isinstance(data, tuple) or isinstance(data, list):
-            assert (all([d.ndim == 1 for d in data]))
-            for d in data:
-                plot_1d(d, ax, normalization[data_idx])
-        elif data.ndim == 1:
-            plot_1d(data, ax, normalization[data_idx])
-        elif data.ndim == 2:
-            plot_2d(data, ax, normalization[data_idx], interpolation[data_idx], xticks[data_idx])
-
-        figure_title = f'({chr(97 + data_idx)})'
-        try:
-            figure_title = f'{figure_title} {titles[data_idx]}'
-        except:
-            pass
-        ax.set_title(figure_title)
-        if data_idx == 0:
-            ax.set_ylabel('Depth')
-        if xlabels[data_idx] is not None:
-            ax.set_xlabel(xlabels[data_idx])
-    return fig
 
 
 def das_plots(data):
@@ -290,19 +93,6 @@ def scf_plots(data):
 
 
 def imap_plots(data):
-    # imap1_focus = bf.imap(data['pulse_focus'], 1)
-    # imap1_side = bf.imap(data['pulse_side'], 1)
-    #
-    # img_imap1, _, _ = bf.imap(data['line_aperture_data'], 1)
-    #
-    # fig = plot_multi(
-    #     [imap1_focus[0], imap1_focus[1], imap1_focus[2],
-    #      imap1_side[0], imap1_side[1], imap1_side[2], img_imap1.T],
-    #     titles=[r'$\textsf{iMAP}_1$ focus', r'$\sigma_y$ focus', r'$\sigma_n$ focus',
-    #             r'$\textsf{iMAP}_1$ side', r'$\sigma_y$ side', r'$\sigma_n$ side', r'$\textsf{iMAP}_1$ image'],
-    #     normalization=['individual', 'individual_positive', 'individual_positive',
-    #                    'individual', 'individual_positive', 'individual_positive', 'individual'])
-
     imap2_focus = bf.imap.imap(data['pulse_focus'], 2)
     imap2_side = bf.imap.imap(data['pulse_side'], 2)
 
@@ -362,15 +152,6 @@ def dmas_plots(data):
                        'DMAS side', 'F-DMAS side', 'F-DMAS image'],
                xlabels=[None, None, None, None, 'Width [mm]'],
                xticks=[None, None, None, None, data['params']['image_ticks']])
-
-    # Plot insight images
-    # fig, axs = plt.subplots(2, 1)
-    # v_min_max = np.max(np.abs(dmas_image_focus).ravel())
-    # im1 = axs[0].imshow(dmas_image_focus.T, cmap='gray', vmin=-v_min_max, vmax=v_min_max)
-    # plt.colorbar(im1, ax=axs[0])
-    # v_min_max = np.max(np.abs(dmas_image_side).ravel())
-    # im2 = axs[1].imshow(dmas_image_side.T, cmap='gray', vmin=-v_min_max, vmax=v_min_max)
-    # plt.colorbar(im2, ax=axs[1])
 
 
 def pdas_plots(data):
@@ -474,19 +255,6 @@ def beamformed_plots(data):
                        'p-DAS_2', 'p-DAS_3'],
                normalization='individual')
 
-    # plot_multi([line_aperture_data[:, :, 0], line_aperture_data[:, :, int(line_aperture_data.shape[2] / 2)],
-    #                   line_aperture_data[:, :, -1]], titles=['leftmost', 'central', 'rightmost'],
-    #                  normalization='individual')
-
-    # line_offsets = data['params']['line_offsets']
-    # plot_multi(
-    #     [data['pulse_side'], line_aperture_data[:, :, 16],
-    #      line_aperture_data[:, :, 21], line_aperture_data[:, :, 26],
-    #      line_aperture_data[:, :, 32]],
-    #     titles=[f'side {data["params"]["pulse_side_distance"]}mm', 'channel', str(line_offsets[16]) + 'mm',
-    #             str(line_offsets[21]) + 'mm', str(line_offsets[26]) + 'mm', str(line_offsets[32]) + 'mm'],
-    #     normalization='individual')
-
 
 def save_figures(base_path: str):
     if not os.path.exists(base_path):
@@ -498,7 +266,7 @@ def save_figures(base_path: str):
 
 
 def create_plots():
-    data = create_data()
+    data = create_toy_data()
 
     das_plots(data)
     cf_plots(data)
